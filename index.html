@@ -52,9 +52,11 @@
   .dot.live{background:var(--good);box-shadow:0 0 8px var(--good);}
 
   /* ---------- tabs ---------- */
-  .tabs{display:flex;padding:0 14px;gap:8px;margin-top:12px;}
+  .tabs{display:flex;padding:0 14px;gap:6px;margin-top:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
   .tab{
-    flex:1;text-align:center;padding:11px 0;font-size:13px;letter-spacing:3px;
+    flex:1 0 auto;text-align:center;padding:11px 14px;font-size:12px;letter-spacing:2px;
+    white-space:nowrap;
     text-transform:uppercase;color:var(--txt-dim);background:var(--panel);
     border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;
     cursor:pointer;transition:.18s;font-weight:600;
@@ -108,7 +110,7 @@
     position:absolute;top:50%;left:50%;width:15%;height:15%;border-radius:50%;
     background:radial-gradient(circle at 35% 30%,#e8ff8a,var(--bubble) 55%,var(--bubble-glow));
     box-shadow:0 0 16px var(--bubble-glow),inset -2px -3px 6px rgba(0,0,0,.25);
-    transform:translate(-50%,-50%);transition:transform .05s linear, box-shadow .2s;
+    transform:translate(-50%,-50%);transition:transform .14s ease-out, box-shadow .2s;
     will-change:transform;
   }
   .ball.lvl{box-shadow:0 0 26px var(--good),inset -2px -3px 6px rgba(0,0,0,.2);
@@ -128,7 +130,7 @@
     position:absolute;top:50%;left:50%;width:30px;height:24px;border-radius:14px;
     transform:translate(-50%,-50%);
     background:radial-gradient(circle at 40% 35%,#e8ff8a,var(--bubble) 60%,var(--bubble-glow));
-    box-shadow:0 0 12px var(--bubble-glow);transition:transform .05s linear;will-change:transform;
+    box-shadow:0 0 12px var(--bubble-glow);transition:transform .14s ease-out;will-change:transform;
   }
   .vial .bub.lvl{background:radial-gradient(circle at 40% 35%,#d4ffb0,var(--good) 60%,#4fae34);box-shadow:0 0 16px var(--good);}
   .vial .tag{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:10px;letter-spacing:2px;color:var(--txt-dim);z-index:2;pointer-events:none;}
@@ -197,7 +199,10 @@
 
 <div class="tabs">
   <div class="tab on" data-view="level">⊕ Level</div>
+  <div class="tab" data-view="pitch">⟋ Pitch</div>
+  <div class="tab" data-view="angle">∠ Angle</div>
   <div class="tab" data-view="ruler">▭ Ruler</div>
+  <div class="tab" data-view="convert">⇄ Convert</div>
 </div>
 
 <div class="stage">
@@ -236,6 +241,11 @@
         <button class="sbtn" id="zeroBtn">⊙ Zero / Calibrate</button>
         <button class="sbtn" id="holdBtn">⏸ Hold</button>
       </div>
+      <div class="lvlbtns" style="margin-top:-12px">
+        <button class="sbtn" data-sm="0">Smooth · Low</button>
+        <button class="sbtn active" data-sm="1">Med</button>
+        <button class="sbtn" data-sm="2">High</button>
+      </div>
     </div>
   </div>
 
@@ -268,17 +278,77 @@
     </div>
   </div>
 
+  <!-- ================= PITCH VIEW ================= -->
+  <div class="view" id="view-pitch">
+    <div class="levelwrap">
+      <div class="read" style="width:min(82vw,360px);padding:22px">
+        <div class="lab">Surface slope from horizontal</div>
+        <div class="num mono" id="pAngle" style="font-size:64px">0<span class="deg">°</span></div>
+      </div>
+      <div class="readout">
+        <div class="read"><div class="lab">Grade</div><div class="num mono" id="pGrade" style="font-size:30px">0<span class="deg">%</span></div></div>
+        <div class="read"><div class="lab">Roof pitch</div><div class="num mono" id="pRatio" style="font-size:30px">0<span class="deg">:12</span></div></div>
+      </div>
+      <div class="hint" style="width:min(82vw,360px)">Lay phone flat on the slope (roof, ramp, beam). Reads true steepest angle in any orientation.</div>
+      <div class="lvlbtns">
+        <button class="sbtn" id="pHold">⏸ Hold</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ANGLE VIEW ================= -->
+  <div class="view" id="view-angle">
+    <div class="levelwrap">
+      <div class="read" style="width:min(82vw,360px);padding:22px">
+        <div class="lab" id="aLab">Rotation from reference A</div>
+        <div class="num mono" id="aAngle" style="font-size:64px">0<span class="deg">°</span></div>
+        <div class="lab mono" id="aSupp" style="margin-top:4px">included · or 180−x reflex</div>
+      </div>
+      <div class="readout">
+        <div class="read"><div class="lab">Ref A</div><div class="num mono" id="aA" style="font-size:24px">—</div></div>
+        <div class="read"><div class="lab">Ref B</div><div class="num mono" id="aB" style="font-size:24px">—</div></div>
+      </div>
+      <div class="hint" style="width:min(82vw,360px)">Set phone against face 1 → Capture A. Move to face 2 → Capture B. Reads the angle between them. Live before B is set.</div>
+      <div class="lvlbtns">
+        <button class="sbtn" id="capA">⊙ Capture A</button>
+        <button class="sbtn" id="capB">⊙ Capture B</button>
+        <button class="sbtn" id="aReset">↺ Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CONVERT VIEW ================= -->
+  <div class="view" id="view-convert">
+    <div class="levelwrap" style="justify-content:flex-start;padding-top:26px;gap:16px">
+      <div class="lvlbtns" style="width:min(82vw,360px)">
+        <button class="sbtn active" data-cat="length">Length</button>
+        <button class="sbtn" data-cat="area">Area</button>
+        <button class="sbtn" data-cat="volume">Volume</button>
+      </div>
+      <div style="width:min(82vw,360px);display:flex;gap:10px">
+        <input id="cVal" class="mono" inputmode="decimal" value="1"
+          style="flex:2;background:var(--panel);border:1px solid var(--line);color:var(--txt);font-size:24px;font-family:'JetBrains Mono';padding:12px 14px;border-radius:10px;min-width:0">
+        <select id="cUnit" class="mono"
+          style="flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--amber);font-size:16px;font-family:'JetBrains Mono';padding:0 8px;border-radius:10px"></select>
+      </div>
+      <div id="cOut" style="width:min(82vw,360px);display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+  </div>
+
 </div>
 
 <script>
 "use strict";
 /* ============ TABS ============ */
+let activeView='level';
 const tabs=document.querySelectorAll('.tab');
 tabs.forEach(t=>t.addEventListener('click',()=>{
   tabs.forEach(x=>x.classList.remove('on'));t.classList.add('on');
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
-  document.getElementById('view-'+t.dataset.view).classList.add('on');
-  if(t.dataset.view==='ruler') drawRuler();
+  activeView=t.dataset.view;
+  document.getElementById('view-'+activeView).classList.add('on');
+  if(activeView==='ruler') drawRuler();
+  if(activeView==='convert') renderConvert();
 }));
 
 /* ============ LEVEL ============ */
@@ -290,21 +360,57 @@ const perm=document.getElementById('perm'), permBtn=document.getElementById('per
 const zeroBtn=document.getElementById('zeroBtn'), holdBtn=document.getElementById('holdBtn');
 
 let offBeta=0, offGamma=0;     // calibration offsets
-let held=false, holdSnap=null;
-let curBeta=0, curGamma=0;      // smoothed raw
+let held=false;
+let curBeta=0, curGamma=0;      // smoothed display value (post-filter)
 let live=false;
 const LVL_TOL=0.6;              // degrees considered "level"
 
-function smooth(prev,next,f){return prev+(next-prev)*f;}
+/* smoothing presets: [moving-avg window, EMA factor, render ms] */
+const SM=[ [6,0.45,40], [18,0.18,55], [45,0.07,80] ];
+let smIdx=1;
+let bufB=[], bufG=[];           // raw sample ring buffers
+let lastRaw=null;               // {b,g}
 
 function handleOrient(e){
   if(e.beta===null||e.gamma===null) return;
   if(!live){live=true;sDot.classList.add('live');sTxt.textContent='SENSOR LIVE';}
-  // beta: front-back (-180..180), gamma: left-right (-90..90)
-  curBeta=smooth(curBeta,e.beta,0.25);
-  curGamma=smooth(curGamma,e.gamma,0.25);
-  if(!held) render(curBeta-offBeta, curGamma-offGamma);
+  lastRaw={b:e.beta,g:e.gamma}; // just collect; loop does the math
 }
+
+function pushAvg(buf,v,win){
+  buf.push(v); if(buf.length>win) buf.splice(0,buf.length-win);
+  let s=0; for(let i=0;i<buf.length;i++)s+=buf[i];
+  return s/buf.length;
+}
+
+let loopMs=SM[smIdx][2], loopTimer=null;
+function tick(){
+  if(lastRaw){
+    const [win,ema]=SM[smIdx];
+    const avgB=pushAvg(bufB,lastRaw.b,win);
+    const avgG=pushAvg(bufG,lastRaw.g,win);
+    curBeta+=(avgB-curBeta)*ema;     // EMA toward moving average
+    curGamma+=(avgG-curGamma)*ema;
+    if(activeView==='level'){ if(!held) render(curBeta-offBeta, curGamma-offGamma); }
+    else if(activeView==='pitch'){ if(!pHeld) renderPitch(); }
+    else if(activeView==='angle'){ if(refA && !refB) renderAngle(); }
+  }
+}
+function startLoop(){
+  if(loopTimer)clearInterval(loopTimer);
+  loopMs=SM[smIdx][2];
+  loopTimer=setInterval(tick,loopMs);
+}
+startLoop();
+
+/* smoothing selector */
+document.querySelectorAll('[data-sm]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-sm]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  smIdx=+b.dataset.sm;
+  bufB=[];bufG=[];           // reset window so change feels immediate
+  startLoop();
+}));
 
 function render(pitch,roll){
   // clamp display
@@ -479,9 +585,81 @@ cardBtn.addEventListener('click',()=>{
 
 window.addEventListener('resize',()=>{dpr=window.devicePixelRatio||1;if(document.getElementById('view-ruler').classList.contains('on'))drawRuler();});
 
+/* ============ PITCH ============ */
+const DEG=180/Math.PI, RAD=Math.PI/180;
+const pAngle=document.getElementById('pAngle'),pGrade=document.getElementById('pGrade'),pRatio=document.getElementById('pRatio');
+const pHoldBtn=document.getElementById('pHold');
+let pHeld=false;
+// device up-normal from beta/gamma; slope = angle of that normal off vertical
+function normal(b,g){const B=b*RAD,G=g*RAD;return [-Math.cos(B)*Math.sin(G),-Math.sin(B),Math.cos(B)*Math.cos(G)];}
+function slopeDeg(b,g){let nz=Math.cos(b*RAD)*Math.cos(g*RAD);nz=Math.max(-1,Math.min(1,nz));return Math.acos(nz)*DEG;}
+function renderPitch(){
+  const a=slopeDeg(curBeta,curGamma);
+  const grade=Math.tan(a*RAD)*100;
+  const rise=Math.tan(a*RAD)*12;
+  pAngle.innerHTML=a.toFixed(1)+'<span class="deg">°</span>';
+  pGrade.innerHTML=grade.toFixed(1)+'<span class="deg">%</span>';
+  pRatio.innerHTML=rise.toFixed(1)+'<span class="deg">:12</span>';
+}
+pHoldBtn.addEventListener('click',()=>{pHeld=!pHeld;pHoldBtn.classList.toggle('active',pHeld);pHoldBtn.textContent=pHeld?'▶ Resume':'⏸ Hold';});
+
+/* ============ ANGLE FINDER ============ */
+const aAngle=document.getElementById('aAngle'),aSupp=document.getElementById('aSupp'),aLab=document.getElementById('aLab');
+const aAv=document.getElementById('aA'),aBv=document.getElementById('aB');
+const capA=document.getElementById('capA'),capB=document.getElementById('capB'),aReset=document.getElementById('aReset');
+let refA=null, refB=null;
+function dot(u,v){return u[0]*v[0]+u[1]*v[1]+u[2]*v[2];}
+function angBetween(b1,g1,b2,g2){let d=dot(normal(b1,g1),normal(b2,g2));d=Math.max(-1,Math.min(1,d));return Math.acos(d)*DEG;}
+function showAngle(deg){
+  aAngle.innerHTML=deg.toFixed(1)+'<span class="deg">°</span>';
+  aSupp.textContent='included '+deg.toFixed(1)+'°  ·  reflex '+(180-deg).toFixed(1)+'°';
+}
+function renderAngle(){ if(refA) showAngle(angBetween(refA.b,refA.g,curBeta,curGamma)); }
+capA.addEventListener('click',()=>{refA={b:curBeta,g:curGamma};refB=null;aBv.textContent='—';
+  aAv.textContent='set';aLab.textContent='Live rotation from A';capA.classList.add('active');setTimeout(()=>capA.classList.remove('active'),300);});
+capB.addEventListener('click',()=>{ if(!refA){alert('Capture A first.');return;}
+  refB={b:curBeta,g:curGamma};aBv.textContent='set';aLab.textContent='Angle A → B (frozen)';
+  showAngle(angBetween(refA.b,refA.g,refB.b,refB.g));capB.classList.add('active');setTimeout(()=>capB.classList.remove('active'),300);});
+aReset.addEventListener('click',()=>{refA=refB=null;aAv.textContent=aBv.textContent='—';aLab.textContent='Rotation from reference A';showAngle(0);});
+
+/* ============ CONVERTER ============ */
+const CATS={
+  length:{u:{mm:1,cm:10,m:1000,in:25.4,ft:304.8,yd:914.4},def:'cm'},
+  area:{u:{'mm²':1,'cm²':100,'m²':1e6,'in²':645.16,'ft²':92903.04},def:'cm²'},
+  volume:{u:{ml:1,l:1000,'cm³':1,'m³':1e6,'in³':16.387064,'fl oz':29.5735,gal:3785.41},def:'ml'}
+};
+let cCat='length';
+const cVal=document.getElementById('cVal'),cUnit=document.getElementById('cUnit'),cOut=document.getElementById('cOut');
+function fillUnits(){
+  const u=CATS[cCat].u;cUnit.innerHTML='';
+  Object.keys(u).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;cUnit.appendChild(o);});
+  cUnit.value=CATS[cCat].def;
+}
+function renderConvert(){
+  const u=CATS[cCat].u, from=cUnit.value, val=parseFloat(cVal.value);
+  cOut.innerHTML='';
+  if(!isFinite(val)){cOut.innerHTML='<div class="hint">enter a number</div>';return;}
+  const base=val*u[from];
+  Object.keys(u).forEach(k=>{
+    if(k===from)return;
+    let r=base/u[k];
+    const txt=Math.abs(r)>=1e6||(Math.abs(r)<1e-4&&r!==0)?r.toExponential(3):parseFloat(r.toPrecision(6)).toString();
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;justify-content:space-between;align-items:baseline;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px';
+    row.innerHTML='<span class="mono" style="font-size:22px;color:var(--amber)">'+txt+'</span><span style="font-size:12px;letter-spacing:1px;color:var(--txt-dim)">'+k+'</span>';
+    cOut.appendChild(row);
+  });
+}
+document.querySelectorAll('[data-cat]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-cat]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');cCat=b.dataset.cat;fillUnits();renderConvert();
+}));
+cVal.addEventListener('input',renderConvert);
+cUnit.addEventListener('change',renderConvert);
+
 /* initial */
 ppmmL.textContent=pxPerMm.toFixed(2);
-render(0,0);
+render(0,0);renderPitch();showAngle(0);fillUnits();
 </script>
 </body>
 </html>
