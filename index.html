@@ -359,7 +359,7 @@ const sDot=document.getElementById('sensorDot'), sTxt=document.getElementById('s
 const perm=document.getElementById('perm'), permBtn=document.getElementById('permBtn'), permWarn=document.getElementById('permWarn');
 const zeroBtn=document.getElementById('zeroBtn'), holdBtn=document.getElementById('holdBtn');
 
-let offBeta=0, offGamma=0;     // calibration offsets
+let offPitch=0, offRoll=0;     // calibration offsets (decoupled space)
 let held=false;
 let curBeta=0, curGamma=0;      // smoothed display value (post-filter)
 let live=false;
@@ -383,6 +383,14 @@ function pushAvg(buf,v,win){
   return s/buf.length;
 }
 
+/* decoupled tilt from gravity vector: each axis independent of orthogonal tilt */
+function decoupled(b,g){
+  const r=Math.PI/180, d=180/Math.PI;
+  const nx=-Math.cos(b*r)*Math.sin(g*r), ny=-Math.sin(b*r), nz=Math.cos(b*r)*Math.cos(g*r);
+  return { pitch:Math.atan2(-ny,Math.hypot(nx,nz))*d,   // front/back only
+           roll :Math.atan2(-nx,Math.hypot(ny,nz))*d }; // sideways only
+}
+
 let loopMs=SM[smIdx][2], loopTimer=null;
 function tick(){
   if(lastRaw){
@@ -391,7 +399,7 @@ function tick(){
     const avgG=pushAvg(bufG,lastRaw.g,win);
     curBeta+=(avgB-curBeta)*ema;     // EMA toward moving average
     curGamma+=(avgG-curGamma)*ema;
-    if(activeView==='level'){ if(!held) render(curBeta-offBeta, curGamma-offGamma); }
+    if(activeView==='level'){ if(!held){const t=decoupled(curBeta,curGamma);render(t.pitch-offPitch, t.roll-offRoll);} }
     else if(activeView==='pitch'){ if(!pHeld) renderPitch(); }
     else if(activeView==='angle'){ if(refA && !refB) renderAngle(); }
   }
@@ -459,7 +467,7 @@ function requestMotion(){
 permBtn.addEventListener('click',requestMotion);
 
 zeroBtn.addEventListener('click',()=>{
-  offBeta=curBeta;offGamma=curGamma;
+  const t=decoupled(curBeta,curGamma);offPitch=t.pitch;offRoll=t.roll;
   zeroBtn.classList.add('active');setTimeout(()=>zeroBtn.classList.remove('active'),350);
 });
 holdBtn.addEventListener('click',()=>{
