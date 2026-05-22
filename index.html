@@ -238,9 +238,11 @@
       </div>
 
       <div class="lvlbtns">
-        <button class="sbtn" id="zeroBtn">⊙ Zero / Calibrate</button>
+        <button class="sbtn" id="zeroBtn">⊙ Zero</button>
+        <button class="sbtn" id="flipBtn">⇋ Flip Cal</button>
         <button class="sbtn" id="holdBtn">⏸ Hold</button>
       </div>
+      <div class="hint" id="flipStatus" style="width:min(82vw,360px);min-height:14px;margin-top:-6px"></div>
       <div class="lvlbtns" style="margin-top:-12px">
         <button class="sbtn" data-sm="0">Smooth · Low</button>
         <button class="sbtn active" data-sm="1">Med</button>
@@ -360,6 +362,7 @@ const perm=document.getElementById('perm'), permBtn=document.getElementById('per
 const zeroBtn=document.getElementById('zeroBtn'), holdBtn=document.getElementById('holdBtn');
 
 let offPitch=0, offRoll=0;     // calibration offsets (decoupled space)
+let biasPitch=0, biasRoll=0;   // phone back-flatness bias (flip-calibrated)
 let held=false;
 let curBeta=0, curGamma=0;      // smoothed display value (post-filter)
 let live=false;
@@ -399,7 +402,7 @@ function tick(){
     const avgG=pushAvg(bufG,lastRaw.g,win);
     curBeta+=(avgB-curBeta)*ema;     // EMA toward moving average
     curGamma+=(avgG-curGamma)*ema;
-    if(activeView==='level'){ if(!held){const t=decoupled(curBeta,curGamma);render(t.pitch-offPitch, t.roll-offRoll);} }
+    if(activeView==='level'){ if(!held){const t=decoupled(curBeta,curGamma);render(t.pitch-biasPitch-offPitch, t.roll-biasRoll-offRoll);} }
     else if(activeView==='pitch'){ if(!pHeld) renderPitch(); }
     else if(activeView==='angle'){ if(refA && !refB) renderAngle(); }
   }
@@ -467,8 +470,29 @@ function requestMotion(){
 permBtn.addEventListener('click',requestMotion);
 
 zeroBtn.addEventListener('click',()=>{
-  const t=decoupled(curBeta,curGamma);offPitch=t.pitch;offRoll=t.roll;
+  const t=decoupled(curBeta,curGamma);offPitch=t.pitch-biasPitch;offRoll=t.roll-biasRoll;
   zeroBtn.classList.add('active');setTimeout(()=>zeroBtn.classList.remove('active'),350);
+});
+
+/* flip (reversal) calibration: cancels phone's own back-flatness tilt.
+   A = reading on surface, B = reading after 180° spin same spot.
+   bias = (A+B)/2 (phone error), true surface tilt = (A-B)/2. */
+const flipBtn=document.getElementById('flipBtn'), flipStatus=document.getElementById('flipStatus');
+let flipState=0, flipA=null;
+flipBtn.addEventListener('click',()=>{
+  const t=decoupled(curBeta,curGamma);
+  if(flipState===0){
+    flipA={p:t.pitch,r:t.roll};flipState=1;
+    flipBtn.classList.add('active');flipBtn.textContent='⇋ Tap after spin';
+    flipStatus.textContent='Step 1 saved. Rotate phone 180° flat in the SAME spot, then tap again.';
+  }else{
+    biasPitch=(flipA.p+t.pitch)/2; biasRoll=(flipA.r+t.roll)/2;
+    offPitch=0; offRoll=0;            // bias now absolute; clear manual zero
+    const tp=(flipA.p-t.pitch)/2, tr=(flipA.r-t.roll)/2;
+    flipState=0;flipA=null;
+    flipBtn.classList.remove('active');flipBtn.textContent='⇋ Flip Cal';
+    flipStatus.textContent='Bias removed (pitch '+biasPitch.toFixed(2)+'° roll '+biasRoll.toFixed(2)+'°). Surface true tilt: pitch '+tp.toFixed(2)+'° roll '+tr.toFixed(2)+'°.';
+  }
 });
 holdBtn.addEventListener('click',()=>{
   held=!held;holdBtn.classList.toggle('active',held);
